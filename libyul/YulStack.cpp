@@ -184,6 +184,7 @@ void YulStack::optimize(Object& _object, bool _isCreation)
 		meter = make_unique<GasMeter>(*evmDialect, _isCreation, m_optimiserSettings.expectedExecutionsPerDeployment);
 	OptimiserSuite::run(
 		dialect,
+		m_eofVersion,
 		meter.get(),
 		_object,
 		m_optimiserSettings.optimizeStackAllocation,
@@ -233,9 +234,10 @@ YulStack::assembleWithDeployed(optional<string_view> _deployName) const
 	creationObject.bytecode = make_shared<evmasm::LinkerObject>(creationAssembly->assemble());
 	yulAssert(creationObject.bytecode->immutableReferences.empty(), "Leftover immutables.");
 	creationObject.assembly = creationAssembly->assemblyString(m_debugInfoSelection);
+	// TODO: fix for EOF
 	creationObject.sourceMappings = make_unique<string>(
 		evmasm::AssemblyItem::computeSourceMapping(
-			creationAssembly->items(),
+			creationAssembly->codeSections().front().items,
 			{{m_charStream->name(), 0}}
 		)
 	);
@@ -245,9 +247,10 @@ YulStack::assembleWithDeployed(optional<string_view> _deployName) const
 	{
 		deployedObject.bytecode = make_shared<evmasm::LinkerObject>(deployedAssembly->assemble());
 		deployedObject.assembly = deployedAssembly->assemblyString(m_debugInfoSelection);
+		// TODO: fix for EOF
 		deployedObject.sourceMappings = make_unique<string>(
 			evmasm::AssemblyItem::computeSourceMapping(
-				deployedAssembly->items(),
+				deployedAssembly->codeSections().front().items,
 				{{m_charStream->name(), 0}}
 			)
 		);
@@ -264,7 +267,7 @@ YulStack::assembleEVMWithDeployed(optional<string_view> _deployName) const
 	yulAssert(m_parserResult->code, "");
 	yulAssert(m_parserResult->analysisInfo, "");
 
-	evmasm::Assembly assembly(m_evmVersion, true, {});
+	evmasm::Assembly assembly(true, m_evmVersion, m_eofVersion, {});
 	EthAssemblyAdapter adapter(assembly);
 	compileEVM(adapter, m_optimiserSettings.optimizeStackAllocation);
 

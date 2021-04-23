@@ -50,7 +50,11 @@ enum AssemblyItemType
 	PushDeployTimeAddress, ///< Push an address to be filled at deploy time. Should not be touched by the optimizer.
 	PushImmutable, ///< Push the currently unknown value of an immutable variable. The actual value will be filled in by the constructor.
 	AssignImmutable, ///< Assigns the current value on the stack to an immutable variable. Only valid during creation code.
-	VerbatimBytecode ///< Contains data that is inserted into the bytecode code section without modification.
+	VerbatimBytecode, ///< Contains data that is inserted into the bytecode code section without modification.
+	CallF,
+	RetF,
+	RelativeJump,
+	ConditionalRelativeJump
 };
 
 enum class Precision { Precise , Approximate };
@@ -85,14 +89,32 @@ public:
 		m_instruction{},
 		m_verbatimBytecode{{_arguments, _returnVariables, std::move(_verbatimData)}}
 	{}
+	static AssemblyItem functionCall(uint16_t _functionID, uint8_t _args, uint8_t _rets, langutil::SourceLocation _location = langutil::SourceLocation())
+	{
+		AssemblyItem result(CallF, _functionID, _location);
+		result.m_functionSignature = std::make_tuple(_args, _rets);
+		return result;
+	}
+	static AssemblyItem functionReturn(uint8_t _rets, langutil::SourceLocation _location = langutil::SourceLocation())
+	{
+		return AssemblyItem(RetF, _rets, _location);
+	}
+	static AssemblyItem jumpTo(AssemblyItem _tag, langutil::SourceLocation _location = langutil::SourceLocation())
+	{
+		return AssemblyItem(RelativeJump, _tag.data(), _location);
+	}
+	static AssemblyItem conditionalJumpTo(AssemblyItem _tag, langutil::SourceLocation _location = langutil::SourceLocation())
+	{
+		return AssemblyItem(ConditionalRelativeJump, _tag.data(), _location);
+	}
 
 	AssemblyItem(AssemblyItem const&) = default;
 	AssemblyItem(AssemblyItem&&) = default;
 	AssemblyItem& operator=(AssemblyItem const&) = default;
 	AssemblyItem& operator=(AssemblyItem&&) = default;
 
-	AssemblyItem tag() const { assertThrow(m_type == PushTag || m_type == Tag, util::Exception, ""); return AssemblyItem(Tag, data()); }
-	AssemblyItem pushTag() const { assertThrow(m_type == PushTag || m_type == Tag, util::Exception, ""); return AssemblyItem(PushTag, data()); }
+	AssemblyItem tag() const { assertThrow(m_type == PushTag || m_type == Tag || m_type == RelativeJump || m_type == ConditionalRelativeJump, util::Exception, ""); return AssemblyItem(Tag, data()); }
+	AssemblyItem pushTag() const { assertThrow(m_type == PushTag || m_type == Tag || m_type == RelativeJump || m_type == ConditionalRelativeJump, util::Exception, ""); return AssemblyItem(PushTag, data()); }
 	/// Converts the tag to a subassembly tag. This has to be called in order to move a tag across assemblies.
 	/// @param _subId the identifier of the subassembly the tag is taken from.
 	AssemblyItem toSubAssemblyTag(size_t _subId) const;
@@ -166,6 +188,7 @@ public:
 	size_t arguments() const;
 	size_t returnValues() const;
 	size_t deposit() const { return returnValues() - arguments(); }
+	size_t maxStackHeightDelta() const;
 
 	/// @returns true if the assembly item can be used in a functional context.
 	bool canBeFunctional() const;
@@ -192,6 +215,7 @@ private:
 	AssemblyItemType m_type;
 	Instruction m_instruction; ///< Only valid if m_type == Operation
 	std::shared_ptr<u256> m_data; ///< Only valid if m_type != Operation
+	std::optional<std::tuple<uint8_t, uint8_t>> m_functionSignature;
 	/// If m_type == VerbatimBytecode, this holds number of arguments, number of
 	/// return variables and verbatim bytecode.
 	std::optional<std::tuple<size_t, size_t, bytes>> m_verbatimBytecode;

@@ -768,7 +768,9 @@ evmasm::AssemblyItems const* CompilerStack::assemblyItems(string const& _contrac
 		solThrow(CompilerError, "Compilation was not successful.");
 
 	Contract const& currentContract = contract(_contractName);
-	return currentContract.evmAssembly ? &currentContract.evmAssembly->items() : nullptr;
+	if (currentContract.evmAssembly)
+		solAssert(currentContract.evmAssembly->codeSections().size() == 1, "Expected a single code section in legacy codegen.");
+	return currentContract.evmAssembly ? &currentContract.evmAssembly->codeSections().front().items : nullptr;
 }
 
 evmasm::AssemblyItems const* CompilerStack::runtimeAssemblyItems(string const& _contractName) const
@@ -777,7 +779,9 @@ evmasm::AssemblyItems const* CompilerStack::runtimeAssemblyItems(string const& _
 		solThrow(CompilerError, "Compilation was not successful.");
 
 	Contract const& currentContract = contract(_contractName);
-	return currentContract.evmRuntimeAssembly ? &currentContract.evmRuntimeAssembly->items() : nullptr;
+	if (currentContract.evmRuntimeAssembly)
+		solAssert(currentContract.evmRuntimeAssembly->codeSections().size() == 1, "Expected a single code section in legacy codegen.");
+	return currentContract.evmRuntimeAssembly ? &currentContract.evmRuntimeAssembly->codeSections().front().items : nullptr;
 }
 
 Json::Value CompilerStack::generatedSources(string const& _contractName, bool _runtime) const
@@ -827,6 +831,10 @@ string const* CompilerStack::sourceMapping(string const& _contractName) const
 	if (m_stackState != CompilationSuccessful)
 		solThrow(CompilerError, "Compilation was not successful.");
 
+	// TODO
+	if (m_eofVersion.has_value())
+		return nullptr;
+
 	Contract const& c = contract(_contractName);
 	if (!c.sourceMapping)
 	{
@@ -840,6 +848,10 @@ string const* CompilerStack::runtimeSourceMapping(string const& _contractName) c
 {
 	if (m_stackState != CompilationSuccessful)
 		solThrow(CompilerError, "Compilation was not successful.");
+
+	// TODO
+	if (m_eofVersion.has_value())
+		return nullptr;
 
 	Contract const& c = contract(_contractName);
 	if (!c.runtimeSourceMapping)
@@ -1380,7 +1392,7 @@ void CompilerStack::compileContract(
 
 	Contract& compiledContract = m_contracts.at(_contract.fullyQualifiedName());
 
-	shared_ptr<Compiler> compiler = make_shared<Compiler>(m_evmVersion, m_revertStrings, m_optimiserSettings);
+	shared_ptr<Compiler> compiler = make_shared<Compiler>(m_evmVersion, m_eofVersion, m_revertStrings, m_optimiserSettings);
 	compiledContract.compiler = compiler;
 
 	solAssert(!m_viaIR, "");

@@ -68,7 +68,7 @@ TestCase::TestResult EVMCodeTransformTest::run(ostream& _stream, string const& _
 		return TestResult::FatalError;
 	}
 
-	evmasm::Assembly assembly{solidity::test::CommonOptions::get().evmVersion(), false, {}};
+	evmasm::Assembly assembly{false, solidity::test::CommonOptions::get().evmVersion(), nullopt, {}};
 	EthAssemblyAdapter adapter(assembly);
 	EVMObjectCompiler::compile(
 		*stack.parserResult(),
