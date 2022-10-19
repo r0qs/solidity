@@ -1,0 +1,50 @@
+name: External contribution guidelines
+
+on:
+  pull_request_target:
+    types: 
+      - opened
+      - reopened
+env:
+  GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+  ORGANIZATION: Ethereum
+  DRY_RUN: true
+
+jobs:
+  comment-external-pr:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Get organization members
+        env:
+          CONTRIBUTOR: ${{ github.event.pull_request.user.login }}
+        run: |
+          gh api graphql \
+            --raw-field org="$ORGANIZATION" \
+            --raw-field query='
+              query($org: String!, $cursor: String) {
+                organization(login: $org) {
+                  membersWithRole(first: 100, after: $cursor) {
+                    pageInfo {
+                      hasNextPage,
+                      endCursor
+                    }
+                    nodes {
+                      login
+                    }
+                  }
+                }
+              }' > org_members.json
+          echo 'CONTRIBUTOR_IS_ORG_MEMBER='$(jq '.data.organization.membersWithRole | any(.nodes[].login; . == "$CONTRIBUTOR")' org_members.json) >> $GITHUB_ENV
+          
+      - name: Comment on external contribution PR
+        if: ${{ env.CONTRIBUTOR_IS_ORG_MEMBER == 'false' }}
+        env:
+          PR: ${{ github.event.pull_request.html_url }}
+        run: |
+          echo "Commenting new external PR: $PR"
+          if [[ $DRY_RUN == "false" ]]; then
+            gh pr edit $PR --add-label "external contribution :star:"
+            gh pr comment $PR --body "Hi, thank you for your contribution. A Solidity team member will shortly look at it.
+            Please, make sure you have read and followed our [contributing guidelines](https://docs.soliditylang.org/en/latest/contributing.html) and also our [review checklist](https://github.com/ethereum/solidity/blob/develop/ReviewChecklist.md) so the process of accepting your contribution can be speedup.
+            If you have any questions, you can reach out to the core team using the [solidity-dev Matrix channel](https://matrix.to/#/#ethereum_solidity-dev:gitter.im)"
+          fi
