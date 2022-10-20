@@ -5,8 +5,8 @@ on:
     types: 
       - opened
       - reopened
+
 env:
-  GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
   ORGANIZATION: Ethereum
   DRY_RUN: true
 
@@ -15,7 +15,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Get organization members
+        id: get_members
         env:
+          GH_TOKEN: ${{ secrets.READ_ORG }}
           CONTRIBUTOR: ${{ github.event.pull_request.user.login }}
         run: |
           gh api graphql \
@@ -34,15 +36,16 @@ jobs:
                   }
                 }
               }' > org_members.json
-          echo 'CONTRIBUTOR_IS_ORG_MEMBER='$(jq '.data.organization.membersWithRole | any(.nodes[].login; . == "$CONTRIBUTOR")' org_members.json) >> $GITHUB_ENV
-          
+          echo "CONTRIBUTOR_IS_ORG_MEMBER=$(jq --arg contributor $CONTRIBUTOR '.data.organization.membersWithRole | any(.nodes[].login; . == $contributor)' org_members.json)" >> $GITHUB_OUTPUT
+
       - name: Comment on external contribution PR
-        if: ${{ env.CONTRIBUTOR_IS_ORG_MEMBER == 'false' }}
+        if: ${{ steps.get_members.outputs.CONTRIBUTOR_IS_ORG_MEMBER == 'false' }}
         env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           PR: ${{ github.event.pull_request.html_url }}
         run: |
           echo "Commenting new external PR: $PR"
-          if [[ $DRY_RUN == "false" ]]; then
+          if [[ $DRY_RUN == 'false' ]]; then
             gh pr edit $PR --add-label "external contribution :star:"
             gh pr comment $PR --body "Hi, thank you for your contribution. A Solidity team member will shortly look at it.
             Please, make sure you have read and followed our [contributing guidelines](https://docs.soliditylang.org/en/latest/contributing.html) and also our [review checklist](https://github.com/ethereum/solidity/blob/develop/ReviewChecklist.md) so the process of accepting your contribution can be speedup.
