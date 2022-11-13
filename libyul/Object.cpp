@@ -22,8 +22,6 @@
 #include <libyul/Object.h>
 
 #include <libyul/AsmPrinter.h>
-#include <libyul/AsmJsonConverter.h>
-#include <libyul/AST.h>
 #include <libyul/Exceptions.h>
 
 #include <libsolutil/CommonData.h>
@@ -90,34 +88,6 @@ string Object::toString(
 	return useSrcComment + "object \"" + name.str() + "\" {\n" + indent(inner) + "\n}";
 }
 
-Json::Value Data::toJson() const
-{
-	Json::Value ret{Json::objectValue};
-	ret["nodeType"] = "YulData";
-	ret["value"] = util::toHex(data);
-	return ret;
-}
-
-Json::Value Object::toJson() const
-{
-	yulAssert(code, "No code");
-
-	Json::Value codeJson{Json::objectValue};
-	codeJson["nodeType"] = "YulCode";
-	codeJson["block"] = AsmJsonConverter(0 /* sourceIndex */)(*code);
-
-	Json::Value subObjectsJson{Json::arrayValue};
-	for (shared_ptr<ObjectNode> const& subObject: subObjects)
-		subObjectsJson.append(subObject->toJson());
-
-	Json::Value ret{Json::objectValue};
-	ret["nodeType"] = "YulObject";
-	ret["name"] = name.str();
-	ret["code"] = codeJson;
-	ret["subObjects"] = subObjectsJson;
-	return ret;
-}
-
 set<YulString> Object::qualifiedDataNames() const
 {
 	set<YulString> qualifiedNames =
@@ -158,9 +128,8 @@ vector<size_t> Object::pathToSubObject(YulString _qualifiedName) const
 
 	vector<size_t> path;
 	Object const* object = this;
-	for (size_t i = 0; i < subObjectPathComponents.size(); i++)
+	for (string const& currentSubObjectName: subObjectPathComponents)
 	{
-		auto const& currentSubObjectName = subObjectPathComponents[i];
 		yulAssert(!currentSubObjectName.empty(), "");
 		auto subIndexIt = object->subIndexByName.find(YulString{currentSubObjectName});
 		yulAssert(
@@ -172,19 +141,13 @@ vector<size_t> Object::pathToSubObject(YulString _qualifiedName) const
 		if (object)
 		{
 			yulAssert(object->subId != numeric_limits<size_t>::max());
-			path.emplace_back(object->subId);
+			path.push_back({object->subId});
 		}
 		else
-		{
-			yulAssert(
-				i == subObjectPathComponents.size() - 1,
-				"Assembly object <" + _qualifiedName.str() + "> does not exist. <" + path + "> has no nested objects."
-			);
 			yulAssert(
 				dynamic_cast<Data const*>(objectNode),
 				"Assembly object <" + _qualifiedName.str() + "> of unrecognized type."
 			);
-		}
 	}
 
 	return path;
