@@ -141,7 +141,7 @@ vector<size_t> Object::pathToSubObject(YulString _qualifiedName) const
 		if (object)
 		{
 			yulAssert(object->subId != numeric_limits<size_t>::max());
-			path.push_back({object->subId});
+			path.emplace_back(object->subId);
 		}
 		else
 			yulAssert(
