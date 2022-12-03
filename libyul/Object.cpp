@@ -158,8 +158,9 @@ vector<size_t> Object::pathToSubObject(YulString _qualifiedName) const
 
 	vector<size_t> path;
 	Object const* object = this;
-	for (string const& currentSubObjectName: subObjectPathComponents)
+	for (size_t i = 0; i < subObjectPathComponents.size(); i++)
 	{
+		auto const& currentSubObjectName = subObjectPathComponents[i];
 		yulAssert(!currentSubObjectName.empty(), "");
 		auto subIndexIt = object->subIndexByName.find(YulString{currentSubObjectName});
 		yulAssert(
@@ -174,10 +175,16 @@ vector<size_t> Object::pathToSubObject(YulString _qualifiedName) const
 			path.emplace_back(object->subId);
 		}
 		else
+		{
+			yulAssert(
+				i == subObjectPathComponents.size() - 1,
+				"Assembly object <" + _qualifiedName.str() + "> of incorrect path."
+			);
 			yulAssert(
 				dynamic_cast<Data const*>(objectNode),
 				"Assembly object <" + _qualifiedName.str() + "> of unrecognized type."
 			);
+		}
 	}
 
 	return path;
