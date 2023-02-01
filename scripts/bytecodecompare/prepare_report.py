@@ -63,7 +63,7 @@ class FileReport:
         return report
 
     def format_summary(self, verbose: bool) -> str:
-        error = (self.contract_reports is None)
+        error = self.contract_reports is None
         contract_reports = self.contract_reports if self.contract_reports is not None else []
         no_bytecode = any(bytecode is None for bytecode in contract_reports)
         no_metadata = any(metadata is None for metadata in contract_reports)
@@ -251,7 +251,7 @@ def detect_metadata_cli_option_support(compiler_path: Path):
             f"Compiler output:\n{process.stderr}\n",
             file=sys.stderr
         )
-        raise Exception("Failed to determine if the compiler supports the --metadata option.")
+        raise RuntimeError("Failed to determine if the compiler supports the --metadata option.")
 
     return process.returncode == 0
 

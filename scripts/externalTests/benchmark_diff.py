@@ -137,7 +137,7 @@ class BenchmarkDiffer:
         def wrap(value: str, symbol: str):
             return f"{symbol}{value}{symbol}"
 
-        markdown = (self.output_format == OutputFormat.MARKDOWN)
+        markdown = self.output_format == OutputFormat.MARKDOWN
 
         if isinstance(diff, str) and diff.startswith('!'):
             return wrap(diff, '`' if markdown else '')
@@ -161,7 +161,7 @@ class BenchmarkDiffer:
                 prefix = '+'
                 if markdown:
                     suffix += ' ❌'
-            important = (diff != 0)
+            important = diff != 0
         else:
             value = diff
             important = False
