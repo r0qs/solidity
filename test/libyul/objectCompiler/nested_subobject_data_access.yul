@@ -20,7 +20,9 @@ object "A" {
 
         object "C" {
             code {
+                sstore(0, datasize("C"))
                 sstore(0, datasize("dataC1"))
+                sstore(0, datasize("dataC2"))
             }
 
             data "dataC1" hex"AA"
