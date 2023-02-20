@@ -148,7 +148,7 @@ vector<size_t> Object::pathToSubObject(YulString _qualifiedName) const
 		{
 			yulAssert(
 				i == subObjectPathComponents.size() - 1,
-				"Assembly object <" + _qualifiedName.str() + "> of incorrect path."
+				"Assembly object <" + _qualifiedName.str() + "> does not exist. <" + path + "> has no nested objects."
 			);
 			yulAssert(
 				dynamic_cast<Data const*>(objectNode),
