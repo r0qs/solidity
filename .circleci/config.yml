@@ -50,7 +50,7 @@ commands:
           command: |
             # FIXME: Checking $CIRCLE_PULL_REQUEST would be better than hard-coding branch names
             # but it's broken. CircleCI associates runs on develop/breaking with random old PRs.
-            [[ $CIRCLE_BRANCH == develop || $CIRCLE_BRANCH == breaking ]] || { echo "Running on a PR or a feature branch - notification skipped."; exit 0; }
+            #[[ $CIRCLE_BRANCH == develop || $CIRCLE_BRANCH == breaking ]] || { echo "Running on a PR or a feature branch - notification skipped."; exit 0; }
 
             # Workflow name is not exposed as an env variable. Has to be queried from the API.
             # The name is not critical so if anything fails, use the raw workflow ID as a fallback.
