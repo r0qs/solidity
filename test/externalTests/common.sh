@@ -389,8 +389,10 @@ function settings_from_preset
         ir-no-optimize)           echo "{${extra_settings}evmVersion: '${evm_version}', viaIR: true,  optimizer: {${extra_optimizer_settings}enabled: false}}" ;;
         legacy-optimize-evm-only) echo "{${extra_settings}evmVersion: '${evm_version}', viaIR: false, optimizer: {${extra_optimizer_settings}enabled: true, details: {yul: false}}}" ;;
         ir-optimize-evm-only)     echo "{${extra_settings}evmVersion: '${evm_version}', viaIR: true,  optimizer: {${extra_optimizer_settings}enabled: true, details: {yul: false}}}" ;;
-        legacy-optimize-evm+yul)  echo "{${extra_settings}evmVersion: '${evm_version}', viaIR: false, optimizer: {${extra_optimizer_settings}enabled: true, details: {yul: true}}}" ;;
-        ir-optimize-evm+yul)      echo "{${extra_settings}evmVersion: '${evm_version}', viaIR: true,  optimizer: {${extra_optimizer_settings}enabled: true, details: {yul: true}}}" ;;
+        # Set only optimizer step UnusedPruner as recommended by Hardhat documentation:
+        # https://github.com/NomicFoundation/hardhat/blob/2295c04c8fb598932023193ca411307013d44712/docs/src/content/hardhat-runner/docs/reference/solidity-support.md?plain=1#L44
+        legacy-optimize-evm+yul)  echo "{${extra_settings}evmVersion: '${evm_version}', viaIR: false, optimizer: {${extra_optimizer_settings}enabled: true, details: {yul: true, yulDetails: { optimizerSteps: 'u' }}}}" ;;
+        ir-optimize-evm+yul)      echo "{${extra_settings}evmVersion: '${evm_version}', viaIR: true,  optimizer: {${extra_optimizer_settings}enabled: true, details: {yul: true, yulDetails: { optimizerSteps: 'u' }}}}" ;;
         *)
             fail "Unknown settings preset: '${preset}'."
             ;;
