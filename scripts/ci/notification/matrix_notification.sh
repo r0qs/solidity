@@ -79,6 +79,19 @@ format_message() {
 }
 
 sanitize_variable() {
+    # Filter special shell symbols like: $, {, }, `(backtick), \(backslash), etc
+    # to prevent command substitution.
+    #
+    # The regex below allows ONLY:
+    # :blank: - space and tab
+    # :alnum: - the same as: [0-9A-Za-z]
+    # And the symbols (excluding comma):
+    #   _, :, / (forward slash), ?, =, &, . (dot), (, ), -
+    #
+    # Some of those characters were allowed to correctly preserve URLs.
+    # All other characters that are not in this list are removed.
+    #
+    # See: https://www.gnu.org/software/sed/manual/html_node/Character-Classes-and-Bracket-Expressions.html
     sanitized_value="$(printf '%s' "$1" | sed "s;[^[:blank:][:alnum:]_:/?=&.()-];;g")"
     echo "$sanitized_value"
 }
