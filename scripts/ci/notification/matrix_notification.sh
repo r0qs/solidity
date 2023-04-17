@@ -1,16 +1,21 @@
 #!/bin/bash
 
-set -e
+set -euo pipefail
 shopt -s inherit_errexit
 
 SCRIPT_DIR="$(dirname "$0")"
 
-fail() {
+function fail() {
     printf '%s\n' "$1" >&2
     exit 1
 }
 
-notify() {
+function notify() {
+    [[ -z "$1" ]] && fail "Event type not provided."
+    [[ "$1" != "failure" && "$1" != "success" && "$1" != "release" ]] && fail "Wrong event type."
+    local event="$1"
+    local workflow_name job formatted_message
+
     # Prevent eval over unexpected environment variable values
     BRANCH="$(sanitize_variable "$BRANCH")"
     TAG="$(sanitize_variable "$TAG")"
@@ -21,15 +26,12 @@ notify() {
     # but it's broken. CircleCI associates runs on develop/breaking with random old PRs.
     [[ "$BRANCH" == "develop" || "$BRANCH" == "breaking" ]] || { echo "Running on a PR or a feature branch - notification skipped."; exit 0; }
 
-    [[ -z "$1" ]] && fail "Event type not provided."
-    local event="$1"
-
     # The release notification only makes sense on tagged commits. If the commit is untagged, just bail out.
     [[ "$event" == "release" ]] && { [[ $TAG != "" ]] || { echo "Not a tagged commit - notification skipped."; exit 0; } }
 
     workflow_name="$(circleci_workflow_name)"
     job="$(circleci_job_name)"
-    formatted_message="$(format_message "$event")"
+    formatted_message="$(format_predefined_message "$event")"
 
     curl "https://${MATRIX_SERVER}/_matrix/client/v3/rooms/${MATRIX_NOTIFY_ROOM_ID}/send/m.room.message" \
         --request POST \
@@ -40,7 +42,7 @@ notify() {
         --data "$formatted_message"
 }
 
-circleci_workflow_name() {
+function circleci_workflow_name() {
     # Workflow name is not exposed as an env variable. Has to be queried from the API.
     # The name is not critical so if anything fails, use the raw workflow ID as a fallback.
     workflow_info=$(curl --silent "https://circleci.com/api/v2/workflow/${CIRCLE_WORKFLOW_ID}") || true
@@ -48,7 +50,7 @@ circleci_workflow_name() {
     printf '%s' "$(sanitize_variable "$workflow_name")"
 }
 
-circleci_job_name() {
+function circleci_job_name() {
     [[ $CIRCLE_NODE_TOTAL == 1 ]] && job="${CIRCLE_JOB}"
     [[ $CIRCLE_NODE_TOTAL != 1 ]] && job="${CIRCLE_JOB} (run $((CIRCLE_NODE_INDEX + 1))/${CIRCLE_NODE_TOTAL})"
     printf '%s' "$(sanitize_variable "$job")"
@@ -59,7 +61,7 @@ circleci_job_name() {
 #
 # Eventually, the matrix api will have support for better format options and `formatted_body` may not be necessary anymore:
 # https://github.com/matrix-org/matrix-spec-proposals/pull/1767
-format_message() {
+function format_predefined_message() {
     [[ -z "$1" ]] && fail "Event type not provided."
     local event="$1"
 
@@ -78,7 +80,7 @@ format_message() {
     echo "$(eval printf '%s' \""${formatted_msg}"\")"
 }
 
-sanitize_variable() {
+function sanitize_variable() {
     # Filter special shell symbols like: $, {, }, `(backtick), \(backslash), etc
     # to prevent command substitution.
     #
