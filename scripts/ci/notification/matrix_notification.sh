@@ -14,13 +14,7 @@ function notify() {
     [[ -z "$1" ]] && fail "Event type not provided."
     [[ "$1" != "failure" && "$1" != "success" && "$1" != "release" ]] && fail "Wrong event type."
     local event="$1"
-    local workflow_name job formatted_message
-
-    # Prevent eval over unexpected environment variable values
-    BRANCH="$(sanitize_variable "$BRANCH")"
-    TAG="$(sanitize_variable "$TAG")"
-    BUILD_URL="$(sanitize_variable "$BUILD_URL")"
-    BUILD_NUM="$(sanitize_variable "$BUILD_NUM")"
+    local formatted_message
 
     # FIXME: Checking $CIRCLE_PULL_REQUEST would be better than hard-coding branch names
     # but it's broken. CircleCI associates runs on develop/breaking with random old PRs.
@@ -29,8 +23,6 @@ function notify() {
     # The release notification only makes sense on tagged commits. If the commit is untagged, just bail out.
     [[ "$event" == "release" ]] && { [[ $TAG != "" ]] || { echo "Not a tagged commit - notification skipped."; exit 0; } }
 
-    workflow_name="$(circleci_workflow_name)"
-    job="$(circleci_job_name)"
     formatted_message="$(format_predefined_message "$event")"
 
     curl "https://${MATRIX_SERVER}/_matrix/client/v3/rooms/${MATRIX_NOTIFY_ROOM_ID}/send/m.room.message" \
@@ -45,15 +37,17 @@ function notify() {
 function circleci_workflow_name() {
     # Workflow name is not exposed as an env variable. Has to be queried from the API.
     # The name is not critical so if anything fails, use the raw workflow ID as a fallback.
+    local workflow_info workflow_name
     workflow_info=$(curl --silent "https://circleci.com/api/v2/workflow/${CIRCLE_WORKFLOW_ID}") || true
     workflow_name=$(echo "$workflow_info" | grep -E '"\s*name"\s*:\s*".*"' | cut -d \" -f 4 || echo "$CIRCLE_WORKFLOW_ID")
-    printf '%s' "$(sanitize_variable "$workflow_name")"
+    echo "$workflow_name"
 }
 
 function circleci_job_name() {
+    local job
     [[ $CIRCLE_NODE_TOTAL == 1 ]] && job="${CIRCLE_JOB}"
     [[ $CIRCLE_NODE_TOTAL != 1 ]] && job="${CIRCLE_JOB} (run $((CIRCLE_NODE_INDEX + 1))/${CIRCLE_NODE_TOTAL})"
-    printf '%s' "$(sanitize_variable "$job")"
+    echo "$job"
 }
 
 # Currently matrix only supports html formatted body,
@@ -64,38 +58,23 @@ function circleci_job_name() {
 function format_predefined_message() {
     [[ -z "$1" ]] && fail "Event type not provided."
     local event="$1"
+    local template formatted_message
 
-    [[ "$event" == "failure" ]] && message="$(cat "${SCRIPT_DIR}/templates/build_fail.json")"
-    [[ "$event" == "success" ]] && message="$(cat "${SCRIPT_DIR}/templates/build_success.json")"
-    [[ "$event" == "release" ]] && message="$(cat "${SCRIPT_DIR}/templates/build_release.json")"
+    [[ "$event" == "failure" ]] && template="${SCRIPT_DIR}/templates/build_fail.json"
+    [[ "$event" == "success" ]] && template="${SCRIPT_DIR}/templates/build_success.json"
+    [[ "$event" == "release" ]] && template="${SCRIPT_DIR}/templates/build_release.json"
 
-    [[ -z "$message" ]] && fail "Message for event [$event] not defined."
+    [[ -z "$template" ]] && fail "Message template for event [$event] not defined."
 
-    # Escape \ and "
-    formatted_msg="$(printf '%s' "$message" | sed 's/\\/\\\\/g' | sed 's/"/\\"/g')"
-    # Evaluate environment variables
-    # NOTE: The variables must be sanitized before call eval to avoid execution
-    # of unexpected commands instead of valid input values.
-    # shellcheck disable=SC2005
-    echo "$(eval printf '%s' \""${formatted_msg}"\")"
-}
+    WORKFLOW_NAME="$(circleci_workflow_name)"
+    JOB="$(circleci_job_name)"
 
-function sanitize_variable() {
-    # Filter special shell symbols like: $, {, }, `(backtick), \(backslash), etc
-    # to prevent command substitution.
-    #
-    # The regex below allows ONLY:
-    # :blank: - space and tab
-    # :alnum: - the same as: [0-9A-Za-z]
-    # And the symbols (excluding comma):
-    #   _, :, / (forward slash), ?, =, &, . (dot), (, ), -
-    #
-    # Some of those characters were allowed to correctly preserve URLs.
-    # All other characters that are not in this list are removed.
-    #
-    # See: https://www.gnu.org/software/sed/manual/html_node/Character-Classes-and-Bracket-Expressions.html
-    sanitized_value="$(printf '%s' "$1" | sed "s;[^[:blank:][:alnum:]_:/?=&.()-];;g")"
-    echo "$sanitized_value"
+    # Export variables that must be substituted
+    export WORKFLOW_NAME JOB BRANCH TAG BUILD_URL BUILD_NUM
+    formatted_message=$(envsubst < "$template")
+    unset WORKFLOW_NAME JOB BRANCH TAG BUILD_URL BUILD_NUM
+
+    echo "$formatted_message"
 }
 
 # Set message environment variables based on CI backend
