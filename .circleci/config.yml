@@ -1415,11 +1415,9 @@ jobs:
           name: Install LSP test dependencies
           command: python -m pip install --user deepdiff colorama
       - run:
-          name: Inspect lsp.py
-          command: Get-Content ./test/lsp.py
-      - run:
           name: Executing solc LSP test suite
           command: python ./test/lsp.py .\build\solc\Release\solc.exe --non-interactive
+          shell: powershell.exe
       - store_test_results: *store_test_results
       - store_artifacts: *artifacts_test_results
       - matrix_notify_failure_unless_pr
