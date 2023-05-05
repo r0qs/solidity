@@ -97,7 +97,7 @@ commands:
     description: "Install python3 and given packages."
     parameters:
       packages:
-        description: "List of optional python packages to be installed (separated by space)."
+        description: "List of extra Python packages to be installed (separated by space)."
         type: string
         default: ""
     steps:
@@ -110,7 +110,7 @@ commands:
               sudo apt install python3 --assume-yes --no-install-recommends
             fi
             sudo apt install python3-pip
-            if [ -n "<< parameters.packages >>" ]
+            if [[ "<< parameters.packages >>" != "" ]]
             then
               echo "Installing additional packages..."
               python3 -m pip install --user << parameters.packages >>
@@ -130,7 +130,7 @@ commands:
           name: Setup Foundry environment variables
           command: |
             FOUNDRY_REPO="foundry-rs/foundry"
-            FOUNDRY_VERSION=<< parameters.version >>
+            FOUNDRY_VERSION="<< parameters.version >>"
             FOUNDRY_RELEASE_SHA=$(curl \
               --silent \
               --fail \
@@ -142,23 +142,25 @@ commands:
             echo "export FOUNDRY_VERSION=$FOUNDRY_VERSION" >> "$BASH_ENV"
             echo "export FOUNDRY_RELEASE_TAG='nightly-${FOUNDRY_RELEASE_SHA}'" >> "$BASH_ENV"
             # Save commit sha for caching
-            echo $FOUNDRY_RELEASE_SHA > /tmp/workspace/foundry-release-sha
+            echo "$FOUNDRY_RELEASE_SHA" > /tmp/workspace/foundry-release-sha
       - restore_cache:
           keys:
-            - foundry-<< parameters.version >>-{{ checksum "/tmp/workspace/foundry-release-sha" }}
+            - foundry-<< parameters.version >>-{{ arch }}-{{ checksum "/tmp/workspace/foundry-release-sha" }}
+      # WARNING! If you edit anything between here and save_cache, remember to invalidate the cache manually.
       - run:
           name: Install foundry
           command: |
-            if ! command -v forge > /dev/null 2>&1; then
-              wget \
-                --output-document /tmp/foundry.tar.gz \
-                "https://github.com/${FOUNDRY_REPO}/releases/download/${FOUNDRY_RELEASE_TAG}/foundry_${FOUNDRY_VERSION}_linux_amd64.tar.gz"
-              sudo tar --extract --gzip --file /tmp/foundry.tar.gz --directory << parameters.install_path >>
-            else
-              echo "Foundry/forge version: $(forge --version | cut -f2 -d' ') already installed. Skipping installation..."
-            fi
+            ! forge --version 2> /dev/null
+            curl \
+              --fail \
+              --location \
+              --output /tmp/foundry.tar.gz \
+              "https://github.com/${FOUNDRY_REPO}/releases/download/${FOUNDRY_RELEASE_TAG}/foundry_${FOUNDRY_VERSION}_linux_amd64.tar.gz"
+            cd "<< parameters.install_path >>"
+            tar --extract --gzip --file /tmp/foundry.tar.gz --one-top-level
+            ln --symbolic --force foundry/{forge,anvil,cast,chisel} .
       - save_cache:
-          key: foundry-<< parameters.version >>-{{ checksum "/tmp/workspace/foundry-release-sha" }}
+          key: foundry-<< parameters.version >>-{{ arch }}-{{ checksum "/tmp/workspace/foundry-release-sha" }}
           paths:
             - << parameters.install_path >>
 
@@ -1320,7 +1322,7 @@ jobs:
             - run:
                 name: External << parameters.project >> tests (<< parameters.binary_type >>)
                 command: |
-                  test/external_tests.py test --solc-binary-type << parameters.binary_type >> --solc-binary-path /tmp/workspace/soljson.js --run << parameters.project >>
+                  test/external_tests.py test --solc-binary-type "<< parameters.binary_type >>" --solc-binary-path /tmp/workspace/soljson.js --run "<< parameters.project >>"
       - when:
           condition:
             equal: [<< parameters.binary_type >>, "native"]
@@ -1328,7 +1330,7 @@ jobs:
             - run:
                 name: External << parameters.project >> tests (<< parameters.binary_type >>)
                 command: |
-                  test/external_tests.py test --solc-binary-type << parameters.binary_type >> --solc-binary-path /tmp/workspace/solc/solc-static-linux --run << parameters.project >>
+                  test/external_tests.py test --solc-binary-type "<< parameters.binary_type >>" --solc-binary-path /tmp/workspace/solc/solc-static-linux --run "<< parameters.project >>"
       - store_artifacts:
           path: reports/externalTests/
       # persist_to_workspace fails if the directory does not exist and the test script will create
