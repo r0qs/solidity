@@ -1107,7 +1107,7 @@ jobs:
   t_ubu_soltest_eof: &t_ubu_soltest_eof
     <<: *base_ubuntu2204_large
     environment:
-      EVM: "shanghai"
+      EVM: "cancun"
       SOLTEST_FLAGS: "--eof-version 1 --optimize"
       BOOST_TEST_ARGS: "-t sem*"
     steps:

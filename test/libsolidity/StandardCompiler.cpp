@@ -1087,6 +1087,8 @@ BOOST_AUTO_TEST_CASE(evm_version)
 	BOOST_CHECK(result["contracts"]["fileA"]["A"]["metadata"].asString().find("\"evmVersion\":\"paris\"") != string::npos);
 	result = compile(inputForVersion("\"evmVersion\": \"shanghai\","));
 	BOOST_CHECK(result["contracts"]["fileA"]["A"]["metadata"].asString().find("\"evmVersion\":\"shanghai\"") != string::npos);
+	result = compile(inputForVersion("\"evmVersion\": \"cancun\","));
+	BOOST_CHECK(result["contracts"]["fileA"]["A"]["metadata"].asString().find("\"evmVersion\":\"cancun\"") != string::npos);
 	// test default
 	result = compile(inputForVersion(""));
 	BOOST_CHECK(result["contracts"]["fileA"]["A"]["metadata"].asString().find("\"evmVersion\":\"shanghai\"") != string::npos);
