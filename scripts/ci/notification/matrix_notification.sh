@@ -17,7 +17,7 @@ function notify() {
 
     # FIXME: Checking $CIRCLE_PULL_REQUEST would be better than hard-coding branch names
     # but it's broken. CircleCI associates runs on develop/breaking with random old PRs.
-    [[ "$BRANCH" == "develop" || "$BRANCH" == "breaking" ]] || { echo "Running on a PR or a feature branch - notification skipped."; exit 0; }
+    #[[ "$BRANCH" == "develop" || "$BRANCH" == "breaking" ]] || { echo "Running on a PR or a feature branch - notification skipped."; exit 0; }
 
     # The release notification only makes sense on tagged commits. If the commit is untagged, just bail out.
     [[ "$event" == "release" ]] && { [[ $TAG != "" ]] || { echo "Not a tagged commit - notification skipped."; exit 0; } }
