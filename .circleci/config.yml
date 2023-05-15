@@ -1776,10 +1776,10 @@ workflows:
 
   nightly:
 
-    triggers:
-      - schedule:
-          cron: "0 0 * * *"
-          <<: *on_develop
+    #triggers:
+    #  - schedule:
+    #      cron: "0 0 * * *"
+    #      <<: *on_develop
 
     jobs:
       # OSSFUZZ builds and (regression) tests
