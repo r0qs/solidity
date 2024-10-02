@@ -135,7 +135,7 @@ html_theme = 'sphinx_rtd_theme'
 # documentation.
 html_theme_options = {
     'logo_only': True,
-    'display_version': True,
+    'flyout_display': 'hidden',
 }
 
 # Add any paths that contain custom themes here, relative to this directory.
