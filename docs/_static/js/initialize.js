@@ -196,8 +196,8 @@ function initialize() {
     .setAttribute("style", `--color-scheme: ${mode}`);
 
   // Remove old input and RTD logo anchor element
-  document.querySelector("input[name=mode]").remove();
-  document.querySelector("label[for=switch]").remove();
+ // document.querySelector("input[name=mode]").remove();
+ // document.querySelector("label[for=switch]").remove();
   document.querySelector(".wy-side-nav-search > a").remove();
 
   // Add footer note
