@@ -36,15 +36,38 @@ def setup(sphinx):
     sphinx.add_css_file('css/custom-dark.css')
     sphinx.add_css_file('css/pygments.css')
 
-# -- General configuration ------------------------------------------------
+# -- RTD GitHub configuration ---------------------------------------------
+
+# Taken from https://github.com/readthedocs/readthedocs.org/blob/e366e7fc8649fbcf1b6d06ecc12c5f7766144c46/readthedocs/projects/constants.py#L350
+GITHUB_REGEXS = [
+    re.compile(r"github.com/(.+)/(.+)(?:\.git){1}$"),
+    # This must come before the one without a / to make sure we don't capture the /
+    re.compile(r"github.com/(.+)/(.+)/"),
+    re.compile(r"github.com/(.+)/(.+)"),
+    re.compile(r"github.com:(.+)/(.+)\.git$"),
+]
+
+# Taken and adapted from https://github.com/readthedocs/readthedocs.org/blob/e366e7fc8649fbcf1b6d06ecc12c5f7766144c46/readthedocs/builds/utils.py#L24
+def get_github_username_repo(url):
+    if "github" in url:
+        for regex in GITHUB_REGEXS:
+            match = regex.search(url)
+            if match:
+                return match.groups()
+    return ("ethereum", "solidity")
+
+git_clone_url = os.environ.get("READTHEDOCS_GIT_CLONE_URL")
+github_user, github_repo = get_github_username_repo(git_clone_url)
 
 html_context = {
     "display_github": True,
-    "github_user": "ethereum",
-    "github_repo": "solidity",
-    "github_version": os.getenv("READTHEDOCS_VERSION", "develop"),
+    "github_user": github_user,
+    "github_repo": github_repo,
+    "github_version": os.environ.get("READTHEDOCS_VERSION", "develop"),
     "conf_py_path": "/docs/",
 }
+
+# -- General configuration ------------------------------------------------
 # If your documentation needs a minimal Sphinx version, state it here.
 #needs_sphinx = '1.0'
 
