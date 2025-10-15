@@ -97,3 +97,5 @@ template<typename V, typename... Args>
 ScopedSaveAndRestore(V, Args...) -> ScopedSaveAndRestore<V>;
 
 }
+int x;    
+#include "something.h"
