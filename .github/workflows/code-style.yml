@@ -1,0 +1,53 @@
+name: Code Style Check
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+permissions:
+  pull-requests: write
+  contents: read
+
+jobs:
+  chk_coding_style:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install shellcheck
+        run: |
+          sudo apt -q update
+          sudo apt install -y shellcheck
+
+      - name: Check for C++ coding style
+        id: style-check
+        run: |
+          output=$(scripts/check_style.sh 2>&1) || {
+            echo "failed=true" >> $GITHUB_OUTPUT
+            echo "output<<EOF" >> $GITHUB_OUTPUT
+            echo "$output" >> $GITHUB_OUTPUT
+            echo "EOF" >> $GITHUB_OUTPUT
+            exit 1
+          }
+        continue-on-error: true
+
+      - name: Comment PR on failure
+        if: steps.style-check.outputs.failed == 'true'
+        uses: thollander/actions-comment-pull-request@v2
+        with:
+          message: |
+            There was an error when running `Code Style Check` for commit `${{ github.sha }}`:
+            ```
+            ${{ steps.style-check.outputs.output }}
+            ```
+            Please check that your changes are working as intended.
+
+      - name: Fail if style check failed
+        if: steps.style-check.outcome == 'failure'
+        run: exit 1
+
+      - name: checking shell scripts
+        run: scripts/chk_shellscripts/chk_shellscripts.sh
+
+      - name: Check for broken symlinks
+        run: scripts/check_symlinks.sh
