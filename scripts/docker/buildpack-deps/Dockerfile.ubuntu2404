@@ -22,7 +22,7 @@
 # (c) 2016-2024 solidity contributors.
 #------------------------------------------------------------------------------
 FROM buildpack-deps:noble AS base
-LABEL version="4"
+LABEL version="5"
 
 ARG DEBIAN_FRONTEND=noninteractive
 
@@ -72,8 +72,7 @@ RUN set -ex; \
 	eldarica_version="2.1"; \
 	wget "https://github.com/uuverifiers/eldarica/releases/download/v${eldarica_version}/eldarica-bin-${eldarica_version}.zip" -O /opt/eld_binaries.zip; \
 	test "$(sha256sum /opt/eld_binaries.zip)" = "0ac43f45c0925383c9d2077f62bbb515fd792375f3b2b101b30c9e81dcd7785c  /opt/eld_binaries.zip"; \
-	unzip /opt/eld_binaries.zip -d /opt; \
-	rm -f /opt/eld_binaries.zip;
+	unzip /opt/eld_binaries.zip -d /opt;
 
 # CVC5
 RUN set -ex; \

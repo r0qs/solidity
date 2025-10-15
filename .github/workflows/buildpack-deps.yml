@@ -4,6 +4,7 @@ permissions:
   pull-requests: write
 
 on:
+  workflow_dispatch:
   pull_request:
     branches: [ develop ]
     paths:
@@ -16,7 +17,7 @@ jobs:
   buildpack-deps:
     env:
       GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      DOCKER_REPOSITORY: ghcr.io/argotorg/solidity-buildpack-deps
+      DOCKER_REPOSITORY: ghcr.io/r0qs/solidity-buildpack-deps
       IMAGE_NAME: buildpack-deps
 
     runs-on: ubuntu-latest
